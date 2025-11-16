@@ -51,6 +51,7 @@
         .group-list {
             flex: 1;
             overflow-y: auto;
+            max-height: calc(100vh - 60px);
         }
         
         .group-item {
@@ -95,6 +96,7 @@
             display: flex;
             flex-direction: column;
             min-width: 0;
+            height: 100vh;
         }
         
         .top-bar {
@@ -102,6 +104,7 @@
             backdrop-filter: blur(10px);
             border-bottom: 1px solid #374151;
             padding: 16px 20px;
+            flex-shrink: 0;
         }
         
         .header {
@@ -218,6 +221,7 @@
             flex: 1;
             overflow-y: auto;
             padding: 20px;
+            min-height: 0;
         }
         
         .card {
@@ -428,6 +432,7 @@
             text-align: center;
             font-size: 12px;
             color: #9ca3af;
+            flex-shrink: 0;
         }
         
         .footer a {
@@ -530,7 +535,10 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsOTP/2.0.0/jsOTP.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/hmac.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/sha1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/enc-base64.min.js"></script>
     <script>
         let accounts = [];
         let filteredAccounts = [];
@@ -538,6 +546,73 @@
         let searchQuery = '';
         let editingIndex = -1;
         let codes = {};
+        
+        // Base32 解码函数
+        function base32Decode(base32) {
+            const base32Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+            let bits = '';
+            let result = '';
+            
+            base32 = base32.replace(/=+$/, '').toUpperCase();
+            
+            for (let i = 0; i < base32.length; i++) {
+                const val = base32Chars.indexOf(base32[i]);
+                if (val === -1) throw new Error('Invalid base32 character');
+                bits += val.toString(2).padStart(5, '0');
+            }
+            
+            for (let i = 0; i + 8 <= bits.length; i += 8) {
+                const byte = bits.substr(i, 8);
+                result += String.fromCharCode(parseInt(byte, 2));
+            }
+            
+            return result;
+        }
+        
+        // 生成 TOTP 代码
+        function generateTOTP(secret, window = 0) {
+            try {
+                // 清理密钥
+                secret = secret.replace(/\s/g, '').toUpperCase();
+                
+                // Base32 解码
+                const key = base32Decode(secret);
+                
+                // 计算时间步长
+                const timeStep = 30;
+                const timestamp = Math.floor(Date.now() / 1000);
+                const counter = Math.floor(timestamp / timeStep) + window;
+                
+                // 将计数器转换为 8 字节数组
+                const counterBytes = new Array(8);
+                for (let i = 7; i >= 0; i--) {
+                    counterBytes[i] = counter & 0xff;
+                    counter = counter >> 8;
+                }
+                
+                // 计算 HMAC-SHA1
+                const hmac = CryptoJS.HmacSHA1(
+                    CryptoJS.enc.Hex.parse(Array.from(counterBytes, byte => byte.toString(16).padStart(2, '0')).join('')),
+                    CryptoJS.enc.Latin1.parse(key)
+                );
+                
+                const hmacResult = hmac.toString(CryptoJS.enc.Hex);
+                
+                // 动态截取
+                const offset = parseInt(hmacResult.substr(39, 1), 16) & 0xf;
+                const code = (
+                    (parseInt(hmacResult.substr(offset * 2 + 0, 2), 16) & 0x7f) << 24 |
+                    (parseInt(hmacResult.substr(offset * 2 + 2, 2), 16) & 0xff) << 16 |
+                    (parseInt(hmacResult.substr(offset * 2 + 4, 2), 16) & 0xff) << 8 |
+                    (parseInt(hmacResult.substr(offset * 2 + 6, 2), 16) & 0xff)
+                ) % 1000000;
+                
+                return code.toString().padStart(6, '0');
+            } catch (error) {
+                console.error('TOTP generation error:', error);
+                return '------';
+            }
+        }
         
         function init() {
             loadAccounts();
@@ -562,13 +637,7 @@
         }
         
         function generateCode(secret) {
-            try {
-                secret = secret.replace(/\s|-/g, '').toUpperCase();
-                const totp = new jsOTP.totp();
-                return totp.getOtp(secret);
-            } catch(e) {
-                return '------';
-            }
+            return generateTOTP(secret);
         }
         
         function getRemaining() {
@@ -651,9 +720,9 @@
                 return;
             }
             
-            const html = filteredAccounts.map((acc) => {
+            const html = filteredAccounts.map((acc, index) => {
                 const realIndex = accounts.indexOf(acc);
-                const code = codes[acc.secret] || generateCode(acc.secret);
+                const code = generateCode(acc.secret);
                 const remain = getRemaining();
                 const timerClass = remain <= 5 ? 'danger' : remain <= 10 ? 'warn' : 'ok';
                 
@@ -735,22 +804,19 @@
             timerDisplay.className = `timer ${timerClass}`;
             timerDisplay.innerHTML = `⏱️ ${remain}s`;
             
-            filteredAccounts.forEach((acc) => {
-                const realIndex = accounts.indexOf(acc);
-                const timerEl = document.getElementById(`timer-${realIndex}`);
-                if (timerEl) {
-                    timerEl.className = `timer ${timerClass}`;
-                    timerEl.innerHTML = `⏱️ ${remain}s`;
-                }
-            });
-            
+            // 每30秒刷新一次验证码
             if (remain === 30) {
-                accounts.forEach(acc => {
-                    if (acc.secret) {
-                        codes[acc.secret] = generateCode(acc.secret);
+                renderAccounts();
+            } else {
+                // 只更新时间显示
+                filteredAccounts.forEach((acc) => {
+                    const realIndex = accounts.indexOf(acc);
+                    const timerEl = document.getElementById(`timer-${realIndex}`);
+                    if (timerEl) {
+                        timerEl.className = `timer ${timerClass}`;
+                        timerEl.innerHTML = `⏱️ ${remain}s`;
                     }
                 });
-                renderAccounts();
             }
         }
         
@@ -916,14 +982,6 @@
         }
         
         window.addEventListener('DOMContentLoaded', init);
-    </script>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('SW 注册成功'))
-                .catch((err) => console.log('SW 注册失败', err));
-        }
     </script>
 </body>
 </html>
