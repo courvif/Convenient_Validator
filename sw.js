@@ -3,6 +3,8 @@ const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
   // jsOTP 脚本
   'https://cdnjs.cloudflare.com/ajax/libs/jsOTP/2.0.0/jsOTP.min.js'
 ];
