@@ -7,8 +7,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="TOTP">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#3498db">
-    <title>🔐验证码管理器</title>
+    <meta name="theme-color" content="#1f2937">
+    <title>🔐 验证码管理器</title>
     <style>
         * {
             margin: 0;
@@ -19,78 +19,217 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #111827 100%);
             min-height: 100vh;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            color: #f3f4f6;
+            display: flex;
+            overflow: hidden;
         }
         
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+        .sidebar {
+            width: 250px;
+            background: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid #374151;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #374151;
+        }
+        
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .group-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .group-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid transparent;
+        }
+        
+        .group-item:hover {
+            background: rgba(75, 85, 99, 0.3);
+        }
+        
+        .group-item.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-left-color: #8b5cf6;
+            font-weight: bold;
+        }
+        
+        .group-count {
+            background: #374151;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .resizer {
+            width: 4px;
+            background: #374151;
+            cursor: col-resize;
+        }
+        
+        .resizer:hover, .resizer.dragging {
+            background: #8b5cf6;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        
+        .top-bar {
+            background: rgba(31, 41, 55, 0.5);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #374151;
+            padding: 16px 20px;
         }
         
         .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
         }
         
         .header h1 {
             font-size: 24px;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
         
         .header p {
             font-size: 12px;
-            opacity: 0.8;
+            color: #9ca3af;
         }
         
         .toolbar {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 8px;
         }
         
-        .toolbar button {
-            flex: 1;
-            padding: 10px;
-            background: white;
+        .btn {
+            padding: 8px 16px;
             border: none;
             border-radius: 8px;
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s;
         }
         
-        .toolbar button:active {
+        .btn:active {
             transform: scale(0.95);
         }
         
+        .btn-primary {
+            background: #8b5cf6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #7c3aed;
+        }
+        
+        .btn-secondary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .stats-bar {
+            background: rgba(55, 65, 81, 0.5);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 12px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #d1d5db;
+        }
+        
+        .timer {
+            font-weight: bold;
+        }
+        
+        .timer.ok { color: #10b981; }
+        .timer.warn { color: #f59e0b; }
+        .timer.danger { color: #ef4444; }
+        
         .search-box {
-            background: white;
-            border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
         }
         
         .search-box input {
             width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
+            padding: 10px 10px 10px 36px;
+            background: #374151;
+            border: 2px solid #4b5563;
             border-radius: 8px;
-            font-size: 16px;
+            color: #f3f4f6;
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .search-box input:focus {
+            border-color: #8b5cf6;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+        }
+        
+        .accounts-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
         }
         
         .card {
-            background: white;
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid #374151;
             border-radius: 12px;
-            padding: 15px;
+            padding: 16px;
             margin-bottom: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            position: relative;
+        }
+        
+        .card:hover {
+            border-color: #4b5563;
         }
         
         .card-header {
@@ -102,90 +241,78 @@
         
         .card-info {
             flex: 1;
+            min-width: 0;
         }
         
         .card-name {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
-            color: #333;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            color: #f9fafb;
         }
         
         .card-group {
-            font-size: 11px;
-            color: #888;
-            background: #f0f0f0;
-            padding: 3px 8px;
-            border-radius: 4px;
             display: inline-block;
+            background: #374151;
+            color: #d1d5db;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
         }
         
         .card-actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
         
         .btn-icon {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8f9fa;
+            background: #374151;
+            color: #9ca3af;
+            font-size: 18px;
         }
         
-        .btn-icon:active {
-            transform: scale(0.9);
+        .btn-icon:hover {
+            background: #4b5563;
         }
         
         .btn-delete {
-            background: #fee;
-            color: #e74c3c;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
         }
         
         .card-code {
-            font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
-            font-size: 28px;
+            font-family: 'SF Mono', monospace;
+            font-size: 32px;
             font-weight: bold;
-            color: #667eea;
+            color: #a78bfa;
             text-align: center;
-            letter-spacing: 3px;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            letter-spacing: 4px;
+            padding: 16px;
+            background: rgba(17, 24, 39, 0.5);
+            border-radius: 10px;
             cursor: pointer;
             user-select: none;
-            position: relative;
         }
         
-        .card-code:active {
-            transform: scale(0.98);
-            background: #e8e9ea;
+        .card-code:hover {
+            background: rgba(17, 24, 39, 0.8);
         }
         
         .card-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 10px;
-        }
-        
-        .card-timer {
+            margin-top: 12px;
             font-size: 13px;
-            font-weight: bold;
         }
-        
-        .timer-ok { color: #2ecc71; }
-        .timer-warn { color: #f39c12; }
-        .timer-danger { color: #e74c3c; }
         
         .copy-hint {
-            font-size: 12px;
-            color: #2ecc71;
+            color: #10b981;
             font-weight: bold;
             opacity: 0;
             transition: opacity 0.3s;
@@ -195,6 +322,22 @@
             opacity: 1;
         }
         
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #9ca3af;
+        }
+        
+        .empty-state h2 {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state p {
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        
         .modal {
             display: none;
             position: fixed;
@@ -202,184 +345,155 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.7);
             z-index: 1000;
+            align-items: center;
+            justify-content: center;
             padding: 20px;
-            overflow-y: auto;
         }
         
         .modal.show {
             display: flex;
-            align-items: center;
-            justify-content: center;
         }
         
         .modal-content {
-            background: white;
+            background: #1f2937;
+            border: 1px solid #374151;
             border-radius: 16px;
             padding: 24px;
             width: 100%;
             max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
         }
         
         .modal-header {
             font-size: 20px;
             font-weight: bold;
             margin-bottom: 20px;
-            text-align: center;
         }
         
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 16px;
         }
         
         .form-group label {
             display: block;
             font-size: 14px;
             font-weight: bold;
-            color: #333;
-            margin-bottom: 6px;
+            color: #d1d5db;
+            margin-bottom: 8px;
         }
         
         .form-group input,
         .form-group textarea {
             width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
+            padding: 10px 12px;
+            background: #111827;
+            border: 2px solid #374151;
             border-radius: 8px;
+            color: #f3f4f6;
             font-size: 14px;
-            font-family: inherit;
+            outline: none;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #8b5cf6;
         }
         
         .form-group textarea {
-            min-height: 100px;
+            min-height: 120px;
             font-family: monospace;
             resize: vertical;
         }
         
         .modal-buttons {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 24px;
         }
         
-        .btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
+        .btn-gray {
+            background: #374151;
+            color: #f3f4f6;
         }
         
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-        
-        .btn-secondary {
-            background: #e0e0e0;
-            color: #333;
-        }
-        
-        .btn:active {
-            transform: scale(0.98);
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: white;
-        }
-        
-        .empty-state h2 {
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-        
-        .empty-state p {
-            font-size: 16px;
-            margin-bottom: 30px;
-            opacity: 0.9;
-        }
-        
-        .empty-state button {
-            background: white;
-            color: #667eea;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        
-        .stats {
-            background: rgba(255,255,255,0.2);
-            border-radius: 8px;
-            padding: 10px;
-            color: white;
-            text-align: center;
-            margin-bottom: 15px;
-            font-size: 13px;
+        .btn-gray:hover {
+            background: #4b5563;
         }
         
         .footer {
+            background: rgba(31, 41, 55, 0.5);
+            border-top: 1px solid #374151;
+            padding: 16px;
             text-align: center;
-            color: white;
-            margin-top: 30px;
-            padding: 20px;
             font-size: 12px;
-            opacity: 0.8;
+            color: #9ca3af;
         }
         
         .footer a {
-            color: white;
+            color: #8b5cf6;
             text-decoration: none;
             font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                max-height: 200px;
+            }
+            .resizer {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🔐 身份验证器</h1>
-            <p>离线版 - 数据仅存在本地</p>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">📂 分组</div>
         </div>
-        
-        <div id="mainView">
-            <div class="toolbar">
-                <button onclick="showAddModal()">➕ 添加</button>
-                <button onclick="showImportModal()">📥 导入</button>
-                <button onclick="exportData()">📤 导出</button>
+        <div class="group-list" id="groupList"></div>
+    </div>
+
+    <div class="resizer" id="resizer"></div>
+
+    <div class="main-content">
+        <div class="top-bar">
+            <div class="header">
+                <div>
+                    <h1>🔐 身份验证器</h1>
+                    <p>离线版 - 数据仅存在本地</p>
+                </div>
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="showAddModal()">➕ 添加</button>
+                    <button class="btn btn-secondary" onclick="showImportModal()">📥 导入</button>
+                    <button class="btn btn-success" onclick="exportData()">📤 导出</button>
+                </div>
             </div>
-            
-            <div class="stats" id="stats">
-                加载中...
+
+            <div class="stats-bar">
+                <div id="statsBar">加载中...</div>
+                <div class="timer ok" id="timerDisplay">⏱️ 30s</div>
             </div>
-            
+
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="🔍 搜索账户..." oninput="filterAccounts()">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="搜索账户名称..." oninput="filterAccounts()">
             </div>
-            
+        </div>
+
+        <div class="accounts-container">
             <div id="accountsList"></div>
         </div>
-        
-        <div id="emptyView" class="empty-state" style="display:none;">
-            <h2>👋</h2>
-            <p>还没有添加任何账户<br>点击下方按钮开始添加</p>
-            <button onclick="showAddModal()">➕ 添加第一个账户</button>
-        </div>
-        
+
         <div class="footer">
-            <p>求个关注谢谢 <a href="https://twitter.com/CengBaofu" target="_blank">@CengBaofu</a></p>
+            Made with ❤️ by <a href="https://twitter.com/CengBaofu" target="_blank">@CengBaofu</a>
         </div>
     </div>
 
-    <!-- 添加/编辑账户弹窗 -->
     <div class="modal" id="editModal">
         <div class="modal-content">
             <div class="modal-header" id="modalTitle">添加账户</div>
@@ -396,13 +510,12 @@
                 <input type="text" id="inputGroup" placeholder="例如: 工作">
             </div>
             <div class="modal-buttons">
-                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
-                <button class="btn btn-primary" onclick="saveAccount()">保存</button>
+                <button class="btn btn-gray" style="flex:1" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" style="flex:1" onclick="saveAccount()">保存</button>
             </div>
         </div>
     </div>
 
-    <!-- 导入弹窗 -->
     <div class="modal" id="importModal">
         <div class="modal-content">
             <div class="modal-header">导入配置</div>
@@ -411,8 +524,8 @@
                 <textarea id="importData" placeholder='[{"name":"Google","secret":"JBSWY3DPEHPK3PXP","group":"工作"}]'></textarea>
             </div>
             <div class="modal-buttons">
-                <button class="btn btn-secondary" onclick="closeImportModal()">取消</button>
-                <button class="btn btn-primary" onclick="importAccounts()">导入</button>
+                <button class="btn btn-gray" style="flex:1" onclick="closeImportModal()">取消</button>
+                <button class="btn btn-primary" style="flex:1" onclick="importAccounts()">导入</button>
             </div>
         </div>
     </div>
@@ -420,35 +533,34 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsOTP/2.0.0/jsOTP.min.js"></script>
     <script>
         let accounts = [];
+        let filteredAccounts = [];
+        let selectedGroup = '全部';
         let searchQuery = '';
         let editingIndex = -1;
+        let codes = {};
         
-        // 初始化
         function init() {
             loadAccounts();
             renderUI();
             startUpdate();
+            initResizer();
         }
         
-        // 加载账户
         function loadAccounts() {
             const saved = localStorage.getItem('totp_accounts');
             if (saved) {
                 try {
                     accounts = JSON.parse(saved);
                 } catch(e) {
-                    console.error('解析失败', e);
                     accounts = [];
                 }
             }
         }
         
-        // 保存账户
         function saveAccounts() {
             localStorage.setItem('totp_accounts', JSON.stringify(accounts));
         }
         
-        // 生成验证码
         function generateCode(secret) {
             try {
                 secret = secret.replace(/\s|-/g, '').toUpperCase();
@@ -459,67 +571,91 @@
             }
         }
         
-        // 获取剩余时间
         function getRemaining() {
             return 30 - (Math.floor(Date.now() / 1000) % 30);
         }
         
-        // 渲染UI
         function renderUI() {
-            if (accounts.length === 0) {
-                document.getElementById('mainView').style.display = 'none';
-                document.getElementById('emptyView').style.display = 'block';
-            } else {
-                document.getElementById('mainView').style.display = 'block';
-                document.getElementById('emptyView').style.display = 'none';
-                updateStats();
-                renderAccounts();
-            }
-        }
-        
-        // 更新统计
-        function updateStats() {
-            const total = accounts.length;
-            const filtered = getFilteredAccounts().length;
-            const groups = [...new Set(accounts.map(a => a.group || '未分组'))].length;
-            
-            document.getElementById('stats').textContent = 
-                `共 ${total} 个账户 | ${groups} 个分组` + 
-                (searchQuery ? ` | 找到 ${filtered} 个` : '');
-        }
-        
-        // 获取过滤后的账户
-        function getFilteredAccounts() {
-            if (!searchQuery) return accounts;
-            
-            return accounts.filter(acc => 
-                acc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (acc.group && acc.group.toLowerCase().includes(searchQuery.toLowerCase()))
-            );
-        }
-        
-        // 过滤账户
-        function filterAccounts() {
-            searchQuery = document.getElementById('searchInput').value;
-            renderAccounts();
+            renderGroups();
+            filterAndRenderAccounts();
             updateStats();
         }
         
-        // 渲染账户列表
-        function renderAccounts() {
-            const filtered = getFilteredAccounts();
+        function renderGroups() {
+            const groups = ['全部', ...new Set(accounts.map(a => a.group || '未分组'))];
+            const groupCounts = {};
             
-            if (filtered.length === 0) {
-                document.getElementById('accountsList').innerHTML = 
-                    '<div class="card"><p style="text-align:center;color:#888;">暂无匹配的账户</p></div>';
+            accounts.forEach(acc => {
+                const g = acc.group || '未分组';
+                groupCounts[g] = (groupCounts[g] || 0) + 1;
+            });
+            
+            const html = groups.map(group => {
+                const count = group === '全部' ? accounts.length : (groupCounts[group] || 0);
+                const active = group === selectedGroup ? 'active' : '';
+                return `
+                    <div class="group-item ${active}" onclick="selectGroup('${group}')">
+                        <span>${group}</span>
+                        <span class="group-count">${count}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('groupList').innerHTML = html;
+        }
+        
+        function selectGroup(group) {
+            selectedGroup = group;
+            searchQuery = '';
+            document.getElementById('searchInput').value = '';
+            renderUI();
+        }
+        
+        function filterAndRenderAccounts() {
+            let filtered = accounts;
+            if (selectedGroup !== '全部') {
+                filtered = filtered.filter(acc => (acc.group || '未分组') === selectedGroup);
+            }
+            
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                filtered = filtered.filter(acc => acc.name.toLowerCase().includes(query));
+            }
+            
+            filteredAccounts = filtered;
+            renderAccounts();
+        }
+        
+        function filterAccounts() {
+            searchQuery = document.getElementById('searchInput').value;
+            filterAndRenderAccounts();
+            updateStats();
+        }
+        
+        function renderAccounts() {
+            const accountsList = document.getElementById('accountsList');
+            
+            if (accounts.length === 0) {
+                accountsList.innerHTML = `
+                    <div class="empty-state">
+                        <h2>👋</h2>
+                        <p>还没有添加任何账户<br>点击「添加」按钮开始</p>
+                        <button class="btn btn-primary" onclick="showAddModal()">➕ 添加第一个账户</button>
+                    </div>
+                `;
                 return;
             }
             
-            const html = filtered.map((acc, idx) => {
+            if (filteredAccounts.length === 0) {
+                accountsList.innerHTML = '<div class="card"><p style="text-align:center;color:#9ca3af;">暂无匹配的账户</p></div>';
+                return;
+            }
+            
+            const html = filteredAccounts.map((acc) => {
                 const realIndex = accounts.indexOf(acc);
-                const code = acc.secret ? generateCode(acc.secret) : '------';
+                const code = codes[acc.secret] || generateCode(acc.secret);
                 const remain = getRemaining();
-                const timerClass = remain <= 5 ? 'timer-danger' : remain <= 10 ? 'timer-warn' : 'timer-ok';
+                const timerClass = remain <= 5 ? 'danger' : remain <= 10 ? 'warn' : 'ok';
                 
                 return `
                     <div class="card">
@@ -529,93 +665,99 @@
                                 <span class="card-group">📂 ${acc.group || '未分组'}</span>
                             </div>
                             <div class="card-actions">
-                                <button class="btn-icon" onclick="editAccount(${realIndex})" title="编辑">✏️</button>
-                                <button class="btn-icon btn-delete" onclick="deleteAccount(${realIndex})" title="删除">🗑️</button>
+                                <button class="btn-icon" onclick="editAccount(${realIndex})">✏️</button>
+                                <button class="btn-icon btn-delete" onclick="deleteAccount(${realIndex})">🗑️</button>
                             </div>
                         </div>
-                        <div class="card-code" onclick="copyCode(this, '${code}')" data-idx="${realIndex}">
+                        <div class="card-code" onclick="copyCode('${code}', ${realIndex})">
                             ${code}
                         </div>
                         <div class="card-footer">
-                            <div class="card-timer ${timerClass}" id="timer-${realIndex}">
-                                ⏱️ ${remain}s
-                            </div>
+                            <div class="timer ${timerClass}" id="timer-${realIndex}">⏱️ ${remain}s</div>
                             <div class="copy-hint" id="hint-${realIndex}">✓ 已复制</div>
                         </div>
                     </div>
                 `;
             }).join('');
             
-            document.getElementById('accountsList').innerHTML = html;
+            accountsList.innerHTML = html;
         }
         
-        // 复制验证码
-        function copyCode(element, code) {
+        function updateStats() {
+            const total = accounts.length;
+            const groups = new Set(accounts.map(a => a.group || '未分组')).size;
+            const filtered = filteredAccounts.length;
+            
+            let stats = `📊 共 ${total} 个账户 | 📂 ${groups} 个分组`;
+            if (searchQuery) {
+                stats += ` | 🔍 找到 ${filtered} 个`;
+            }
+            if (selectedGroup !== '全部') {
+                stats += ` | 📁 当前: ${selectedGroup}`;
+            }
+            
+            document.getElementById('statsBar').innerHTML = stats;
+        }
+        
+        function copyCode(code, index) {
             if (code === '------') return;
             
-            const idx = element.dataset.idx;
-            const hint = document.getElementById(`hint-${idx}`);
+            const hint = document.getElementById(`hint-${index}`);
             
-            // 复制
-            if (navigator.clipboard && navigator.clipboard.writeText) {
+            if (navigator.clipboard) {
                 navigator.clipboard.writeText(code).then(() => {
                     showCopyHint(hint);
-                }).catch(() => {
-                    fallbackCopy(code, hint);
                 });
             } else {
-                fallbackCopy(code, hint);
-            }
-        }
-        
-        // 降级复制方案
-        function fallbackCopy(text, hint) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = code;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
                 document.execCommand('copy');
+                document.body.removeChild(textarea);
                 showCopyHint(hint);
-            } catch(e) {
-                alert('复制失败，请手动复制：' + text);
             }
-            document.body.removeChild(textarea);
         }
         
-        // 显示复制提示
         function showCopyHint(hint) {
             if (!hint) return;
             hint.classList.add('show');
             setTimeout(() => hint.classList.remove('show'), 1500);
         }
         
-        // 更新倒计时
         function updateCodes() {
             const remain = getRemaining();
+            const timerClass = remain <= 5 ? 'danger' : remain <= 10 ? 'warn' : 'ok';
             
-            accounts.forEach((acc, idx) => {
-                const timerEl = document.getElementById(`timer-${idx}`);
+            const timerDisplay = document.getElementById('timerDisplay');
+            timerDisplay.className = `timer ${timerClass}`;
+            timerDisplay.innerHTML = `⏱️ ${remain}s`;
+            
+            filteredAccounts.forEach((acc) => {
+                const realIndex = accounts.indexOf(acc);
+                const timerEl = document.getElementById(`timer-${realIndex}`);
                 if (timerEl) {
-                    const timerClass = remain <= 5 ? 'timer-danger' : remain <= 10 ? 'timer-warn' : 'timer-ok';
-                    timerEl.className = `card-timer ${timerClass}`;
-                    timerEl.textContent = `⏱️ ${remain}s`;
+                    timerEl.className = `timer ${timerClass}`;
+                    timerEl.innerHTML = `⏱️ ${remain}s`;
                 }
             });
             
             if (remain === 30) {
+                accounts.forEach(acc => {
+                    if (acc.secret) {
+                        codes[acc.secret] = generateCode(acc.secret);
+                    }
+                });
                 renderAccounts();
             }
         }
         
-        // 启动更新
         function startUpdate() {
             setInterval(updateCodes, 1000);
         }
         
-        // 显示添加弹窗
         function showAddModal() {
             editingIndex = -1;
             document.getElementById('modalTitle').textContent = '添加账户';
@@ -625,7 +767,6 @@
             document.getElementById('editModal').classList.add('show');
         }
         
-        // 编辑账户
         function editAccount(index) {
             editingIndex = index;
             const acc = accounts[index];
@@ -636,19 +777,13 @@
             document.getElementById('editModal').classList.add('show');
         }
         
-        // 保存账户
         function saveAccount() {
             const name = document.getElementById('inputName').value.trim();
             const secret = document.getElementById('inputSecret').value.trim();
             const group = document.getElementById('inputGroup').value.trim();
             
-            if (!name) {
-                alert('请输入账户名称');
-                return;
-            }
-            
-            if (!secret) {
-                alert('请输入密钥');
+            if (!name || !secret) {
+                alert('请填写账户名称和密钥');
                 return;
             }
             
@@ -665,32 +800,28 @@
             renderUI();
         }
         
-        // 删除账户
         function deleteAccount(index) {
-            if (confirm(`确定要删除「${accounts[index].name}」吗？`)) {
+            if (confirm(`确定要删除「${accounts[index].name}」吗?`)) {
                 accounts.splice(index, 1);
                 saveAccounts();
                 renderUI();
             }
         }
         
-        // 关闭弹窗
         function closeModal() {
             document.getElementById('editModal').classList.remove('show');
+            editingIndex = -1;
         }
         
-        // 显示导入弹窗
         function showImportModal() {
             document.getElementById('importData').value = '';
             document.getElementById('importModal').classList.add('show');
         }
         
-        // 关闭导入弹窗
         function closeImportModal() {
             document.getElementById('importModal').classList.remove('show');
         }
         
-        // 导入账户
         function importAccounts() {
             const data = document.getElementById('importData').value.trim();
             
@@ -703,11 +834,10 @@
                 const imported = JSON.parse(data);
                 
                 if (!Array.isArray(imported)) {
-                    alert('格式错误：应该是一个数组');
+                    alert('格式错误: 应该是一个数组');
                     return;
                 }
                 
-                // 合并账户（避免重复）
                 imported.forEach(acc => {
                     if (acc.name && acc.secret) {
                         const exists = accounts.some(a => 
@@ -727,13 +857,11 @@
                 closeImportModal();
                 renderUI();
                 alert(`✅ 成功导入 ${imported.length} 个账户`);
-                
             } catch(e) {
-                alert('❌ JSON 格式错误：' + e.message);
+                alert('❌ JSON 格式错误: ' + e.message);
             }
         }
         
-        // 导出数据
         function exportData() {
             if (accounts.length === 0) {
                 alert('没有可导出的账户');
@@ -741,8 +869,6 @@
             }
             
             const data = JSON.stringify(accounts, null, 2);
-            
-            // 创建下载
             const blob = new Blob([data], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -751,8 +877,7 @@
             a.click();
             URL.revokeObjectURL(url);
             
-            // 同时复制到剪贴板
-            if (navigator.clipboard && navigator.clipboard.writeText) {
+            if (navigator.clipboard) {
                 navigator.clipboard.writeText(data).then(() => {
                     alert('✅ 已导出并复制到剪贴板');
                 }).catch(() => {
@@ -763,16 +888,42 @@
             }
         }
         
-        // 页面加载时初始化
-        init();
+        function initResizer() {
+            const resizer = document.getElementById('resizer');
+            const sidebar = document.getElementById('sidebar');
+            let isResizing = false;
+            
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                resizer.classList.add('dragging');
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const newWidth = Math.max(200, Math.min(400, e.clientX));
+                sidebar.style.width = newWidth + 'px';
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizer.classList.remove('dragging');
+                    document.body.style.cursor = 'default';
+                }
+            });
+        }
+        
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 
     <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-          .then(() => console.log('SW 注册成功'))
-          .catch((err) => console.log('SW 注册失败', err));
-      }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('SW 注册成功'))
+                .catch((err) => console.log('SW 注册失败', err));
+        }
     </script>
 </body>
 </html>
